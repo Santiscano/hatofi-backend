@@ -52,6 +52,7 @@ def registration_payload() -> dict:
         "password": "correct-horse-battery",
         "confirm_password": "correct-horse-battery",
         "role_id": 1,
+        "terms_accepted": True,
     }
 
 

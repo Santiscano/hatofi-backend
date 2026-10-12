@@ -36,6 +36,7 @@ class User(Base):
     full_name       : Mapped[str]       = mapped_column(String(100), nullable=False)
     email           : Mapped[str]       = mapped_column(String(255), unique=True, index=True, nullable=False)
     hashed_password : Mapped[str]       = mapped_column(String(255), nullable=False)
+    terms_accepted  : Mapped[bool]       = mapped_column(Boolean, default=False, nullable=False, server_default="false")
     is_active       : Mapped[bool]      = mapped_column(Boolean, default=True)
     created_at      : Mapped[datetime]  = mapped_column(DateTime(timezone=True), server_default=func.now())
     role_id         : Mapped[int]       = mapped_column(Integer, ForeignKey("roles.id"), nullable=False) # Clave Foránea (FK) apuntando a la tabla 'roles' (@ManyToOne)
