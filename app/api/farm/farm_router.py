@@ -15,6 +15,14 @@ from app.schemas.farmSchema import (
 router = APIRouter(prefix="/farms", tags=["Farms"])
 
 
+@router.get("", response_model=list[FarmResponse])
+def list_farms(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[FarmResponse]:
+    return FarmService.list_farms(db, current_user)
+
+
 @router.post("", response_model=FarmResponse, status_code=status.HTTP_201_CREATED)
 def create_farm(
     farm: FarmCreate,

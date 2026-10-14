@@ -37,9 +37,9 @@ _load_models()
 async def lifespan(_: FastAPI):
     Base.metadata.create_all(bind=engine)
     ensure_schema()
-    # if ENVIRONMENT == "development":
-    #     with SessionLocal() as db:
-    #         seed_roles(db)
+    if ENVIRONMENT == "development":
+        with SessionLocal() as db:
+            seed_roles(db)
     yield
 
 

@@ -13,6 +13,15 @@ from app.schemas.farmSchema import (
 
 class FarmService:
     @staticmethod
+    def list_farms(db: Session, current_user: User) -> list[Farm]:
+        return (
+            db.query(Farm)
+            .filter(Farm.user_id == current_user.id)
+            .order_by(Farm.name.asc())
+            .all()
+        )
+
+    @staticmethod
     def _get_owned_farm(db: Session, farm_id: int, current_user: User) -> Farm:
         farm = (
             db.query(Farm)
