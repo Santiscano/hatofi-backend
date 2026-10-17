@@ -13,6 +13,9 @@ class BatchCreate(BaseModel):
     duration_months: int = Field(gt=0)
     funding_start_date: datetime
     farm_id: int = Field(gt=0)
+    price_per_share: float = Field(default=1, gt=0)
+    estimated_roi_percentage: float = Field(default=0, ge=0)
+    farmer_address: str | None = Field(default=None, min_length=56, max_length=56)
 
 
 class BatchUpdate(BaseModel):
@@ -44,5 +47,7 @@ class BatchResponse(BaseModel):
     funding_end_date: datetime | None = None
     status: BatchStatusEnum
     farm_id: int
+    smart_contract_address: str | None = None
+    blockchain_tx_hash: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

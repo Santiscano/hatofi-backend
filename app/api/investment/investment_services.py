@@ -10,6 +10,8 @@ from app.schemas.investmentBatchSchema import (
     InvestmentAmountUpdate,
     InvestmentCreate,
 )
+from app.core.config import STELLAR_ENABLED
+from app.integrations.stellar_service import ensure_confirmed_transaction
 
 
 class InvestmentService:
@@ -68,10 +70,37 @@ class InvestmentService:
                 detail="Ya existe una inversión para este lote; utiliza el endpoint de incremento.",
             )
         InvestmentService._ensure_available_amount(batch, investment.amount)
+        if STELLAR_ENABLED and (
+            investment.wallet_address is None or investment.transaction_hash is None
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="La inversión requiere wallet y hash de transacción Stellar.",
+            )
+        if investment.transaction_hash is not None:
+            duplicate = (
+                db.query(InvestmentBatch)
+                .filter(InvestmentBatch.transaction_hash == investment.transaction_hash)
+                .first()
+            )
+            if duplicate is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="La transacción Stellar ya fue registrada.",
+                )
+            try:
+                ensure_confirmed_transaction(investment.transaction_hash)
+            except (RuntimeError, ValueError) as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"La transacción Stellar no está confirmada: {exc}",
+                ) from exc
         record = InvestmentBatch(
             user_id=current_user.id,
             batch_id=batch.id,
             amount=investment.amount,
+            wallet_address=investment.wallet_address,
+            transaction_hash=investment.transaction_hash,
         )
         batch.collected_amount = Decimal(str(batch.collected_amount or 0)) + investment.amount
         db.add(record)

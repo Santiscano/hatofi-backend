@@ -61,7 +61,8 @@ class Batch(Base):
         default=BatchStatusEnum.DRAFT,
         nullable=False
     )
-    smart_contract_address: Mapped[Optional[str]] = mapped_column(String(255), nullable=True) # dirección del contrato inteligente en la blockchain (si aplica)
+    smart_contract_address: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    blockchain_tx_hash: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Llaves Foráneas

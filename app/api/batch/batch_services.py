@@ -1,4 +1,5 @@
 from uuid import uuid4
+from datetime import timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -7,6 +8,8 @@ from app.models.batchModel import Batch, BatchCategoryEnum, BatchStatusEnum
 from app.models.farmModel import Farm
 from app.models.userModel import RoleEnum, User
 from app.schemas.batchSchema import BatchCreate, BatchStatusUpdate, BatchUpdate
+from app.core.config import STELLAR_ENABLED
+from app.integrations.stellar_service import create_batch_on_chain
 
 
 ALLOWED_STATUS_TRANSITIONS: dict[BatchStatusEnum, set[BatchStatusEnum]] = {
@@ -95,6 +98,11 @@ class BatchService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Solo el propietario de la finca o un administrador puede crear lotes.",
             )
+        if STELLAR_ENABLED and not batch_create.farmer_address:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="La dirección Stellar del farmer es obligatoria para crear el batch.",
+            )
 
         batch = Batch(
             title=batch_create.title,
@@ -106,12 +114,45 @@ class BatchService:
             farm_id=batch_create.farm_id,
             code=BatchService._generate_code(),
             status=BatchStatusEnum.DRAFT,
-            price_per_share=0,
-            estimated_roi_percentage=13,
+            price_per_share=batch_create.price_per_share,
+            estimated_roi_percentage=batch_create.estimated_roi_percentage,
         )
         db.add(batch)
         db.commit()
         db.refresh(batch)
+        if STELLAR_ENABLED:
+            funding_start = batch.funding_start_date
+            if funding_start.tzinfo is None:
+                funding_start = funding_start.replace(tzinfo=timezone.utc)
+            try:
+                tx_hash = create_batch_on_chain(
+                    batch_id=batch.id,
+                    farm_id=batch.farm_id,
+                    code=batch.code,
+                    title=batch.title,
+                    description=batch.description,
+                    category=batch.category.value,
+                    target_amount=batch.target_amount,
+                    price_per_share=batch.price_per_share,
+                    estimated_roi_percentage=batch.estimated_roi_percentage,
+                    duration_months=batch.duration_months,
+                    funding_start_timestamp=int(funding_start.timestamp()),
+                    funding_end_timestamp=(
+                        int(batch.funding_end_date.timestamp())
+                        if batch.funding_end_date
+                        else 0
+                    ),
+                    farmer_address=batch_create.farmer_address,
+                )
+            except (RuntimeError, ValueError) as exc:
+                db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=f"No se pudo publicar el batch en Stellar: {exc}",
+                ) from exc
+            batch.blockchain_tx_hash = tx_hash
+            db.commit()
+            db.refresh(batch)
         return batch
 
     @staticmethod

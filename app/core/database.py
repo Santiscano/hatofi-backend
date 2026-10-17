@@ -33,6 +33,23 @@ def ensure_schema() -> None:
                 "ALTER TABLE batches ADD COLUMN category "
                 "VARCHAR(20) NOT NULL DEFAULT 'CEBA_INTENSIVA'"
             )
+        if "blockchain_tx_hash" not in batch_columns:
+            statements.append(
+                "ALTER TABLE batches ADD COLUMN blockchain_tx_hash VARCHAR(128)"
+            )
+
+    if "investment_batches" in tables:
+        investment_columns = {
+            column["name"] for column in inspector.get_columns("investment_batches")
+        }
+        if "wallet_address" not in investment_columns:
+            statements.append(
+                "ALTER TABLE investment_batches ADD COLUMN wallet_address VARCHAR(56)"
+            )
+        if "transaction_hash" not in investment_columns:
+            statements.append(
+                "ALTER TABLE investment_batches ADD COLUMN transaction_hash VARCHAR(128)"
+            )
 
     if statements:
         with engine.begin() as connection:

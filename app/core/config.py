@@ -17,6 +17,16 @@ SECRET_KEY = os.getenv(
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "240"))
 ENVIRONMENT = os.getenv("ENVIRONMENT", "production").strip().lower()
+STELLAR_ENABLED = os.getenv("STELLAR_ENABLED", "false").strip().lower() == "true"
+STELLAR_NETWORK = os.getenv("STELLAR_NETWORK", "testnet").strip().lower()
+STELLAR_RPC_URL = os.getenv(
+    "STELLAR_RPC_URL",
+    "https://soroban-testnet.stellar.org",
+)
+STELLAR_CONTRACT_ID = os.getenv("STELLAR_CONTRACT_ID", "")
+STELLAR_TOKEN_ID = os.getenv("STELLAR_TOKEN_ID", "")
+STELLAR_ADMIN_SECRET = os.getenv("STELLAR_ADMIN_SECRET", "")
+STELLAR_DECIMALS = int(os.getenv("STELLAR_DECIMALS", "7"))
 
 
 def _get_cors_origins() -> list[str]:
