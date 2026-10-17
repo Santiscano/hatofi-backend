@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, func
+from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -44,6 +44,8 @@ class InvestmentBatch(Base):
         onupdate=func.now(),
         nullable=False,
     )
+    wallet_address: Mapped[str | None] = mapped_column(String(56), nullable=True)
+    transaction_hash: Mapped[str | None] = mapped_column(String(128), nullable=True, unique=True)
 
     investor: Mapped["User"] = relationship("User", back_populates="investments")
     batch: Mapped["Batch"] = relationship("Batch", back_populates="investments")

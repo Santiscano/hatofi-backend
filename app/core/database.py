@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from app.core.config import DATABASE_URL
@@ -8,6 +8,53 @@ connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite")
 engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+
+def ensure_schema() -> None:
+    """Apply small forward-compatible schema changes for existing databases."""
+    inspector = inspect(engine)
+    tables = inspector.get_table_names()
+    if "users" not in tables and "batches" not in tables:
+        return
+
+    statements = []
+    if "users" in tables:
+        user_columns = {column["name"] for column in inspector.get_columns("users")}
+        if "terms_accepted" not in user_columns:
+            statements.append(
+                "ALTER TABLE users ADD COLUMN terms_accepted "
+                "BOOLEAN NOT NULL DEFAULT FALSE"
+            )
+
+    if "batches" in tables:
+        batch_columns = {column["name"] for column in inspector.get_columns("batches")}
+        if "category" not in batch_columns:
+            statements.append(
+                "ALTER TABLE batches ADD COLUMN category "
+                "VARCHAR(20) NOT NULL DEFAULT 'CEBA_INTENSIVA'"
+            )
+        if "blockchain_tx_hash" not in batch_columns:
+            statements.append(
+                "ALTER TABLE batches ADD COLUMN blockchain_tx_hash VARCHAR(128)"
+            )
+
+    if "investment_batches" in tables:
+        investment_columns = {
+            column["name"] for column in inspector.get_columns("investment_batches")
+        }
+        if "wallet_address" not in investment_columns:
+            statements.append(
+                "ALTER TABLE investment_batches ADD COLUMN wallet_address VARCHAR(56)"
+            )
+        if "transaction_hash" not in investment_columns:
+            statements.append(
+                "ALTER TABLE investment_batches ADD COLUMN transaction_hash VARCHAR(128)"
+            )
+
+    if statements:
+        with engine.begin() as connection:
+            for statement in statements:
+                connection.execute(text(statement))
 
 
 def get_db():

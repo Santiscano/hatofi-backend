@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.auth.auth_token import get_current_user
 from app.api.batch.batch_services import BatchService
 from app.core.database import get_db
 from app.models.userModel import User
-from app.models.batchModel import BatchStatusEnum
+from app.models.batchModel import BatchCategoryEnum, BatchStatusEnum
 from app.schemas.batchSchema import (
     BatchCreate,
     BatchResponse,
@@ -16,12 +16,23 @@ from app.schemas.batchSchema import (
 router = APIRouter(prefix="/batches", tags=["Batches"])
 
 
+@router.get("/farm/{farm_id}", response_model=list[BatchResponse])
+def list_farm_batches(
+    farm_id: int,
+    status_filter: BatchStatusEnum | None = Query(default=None, alias="status"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[BatchResponse]:
+    return BatchService.list_by_farm(db, farm_id, current_user, status_filter)
+
+
 @router.get("/open", response_model=list[BatchResponse])
 def list_open_batches(
+    category: BatchCategoryEnum | None = Query(default=None),
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ) -> list[BatchResponse]:
-    return BatchService.list_by_status(db, BatchStatusEnum.FUNDING)
+    return BatchService.list_by_status(db, BatchStatusEnum.FUNDING, category)
 
 @router.get("/closed", response_model=list[BatchResponse])
 def list_closed_batches(

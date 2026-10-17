@@ -42,12 +42,19 @@ class UserService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="La contraseña y la confirmación de contraseña no coinciden."
             )
+
+        if not user_create.terms_accepted:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Debes aceptar los términos y condiciones para registrarte.",
+            )
         
         # Crear el nuevo usuario
         new_user = User(
             full_name=user_create.full_name,
             email=user_create.email,
             hashed_password=get_password_hash(user_create.password),
+            terms_accepted=user_create.terms_accepted,
             role_id=user_create.role_id
         )
         db.add(new_user) # Agregar el nuevo usuario a la sesión

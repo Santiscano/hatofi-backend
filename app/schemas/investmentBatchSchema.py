@@ -9,6 +9,8 @@ from app.models.batchModel import BatchStatusEnum
 class InvestmentCreate(BaseModel):
     batch_id: int = Field(gt=0)
     amount: Decimal = Field(gt=0, max_digits=18, decimal_places=2)
+    wallet_address: str | None = Field(default=None, min_length=56, max_length=56)
+    transaction_hash: str | None = Field(default=None, min_length=64, max_length=128)
 
 
 class InvestmentAmountUpdate(BaseModel):
@@ -22,6 +24,8 @@ class InvestmentResponse(BaseModel):
     batch_status: BatchStatusEnum
     created_at: datetime
     updated_at: datetime
+    wallet_address: str | None = None
+    transaction_hash: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

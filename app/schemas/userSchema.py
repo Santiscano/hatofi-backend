@@ -21,6 +21,7 @@ class UserCreate(UserBase):
     password: str = Field(min_length=8, max_length=128)
     confirm_password: str = Field(min_length=8, max_length=128)
     role_id: int
+    terms_accepted: bool
 
 
 class UserUpdatePassword(BaseModel):
@@ -32,6 +33,7 @@ class UserUpdatePassword(BaseModel):
 class UserResponse(UserBase):
     id: int
     is_active: bool
+    terms_accepted: bool
     created_at: datetime
     role: RoleResponse
     model_config = ConfigDict(from_attributes=True)

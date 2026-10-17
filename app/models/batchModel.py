@@ -24,6 +24,11 @@ class BatchStatusEnum(str, enum.Enum):
     CANCELLED = "CANCELLED"       # No alcanzó la meta o cancelado
 
 
+class BatchCategoryEnum(str, enum.Enum):
+    CEBA_INTENSIVA = "CEBA_INTENSIVA"
+    CRIA_LEVANTE = "CRIA_LEVANTE"
+
+
 class Batch(Base):
     __tablename__ = "batches"
 
@@ -31,6 +36,12 @@ class Batch(Base):
     title: Mapped[str] = mapped_column(String(150), nullable=False)
     code: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)  # ej. LOTE-2026-01
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    category: Mapped[BatchCategoryEnum] = mapped_column(
+        SQLEnum(BatchCategoryEnum, name="batch_category_enum"),
+        default=BatchCategoryEnum.CEBA_INTENSIVA,
+        server_default=BatchCategoryEnum.CEBA_INTENSIVA.value,
+        nullable=False,
+    )
 
     # Métricas Financieras (Usamos Numeric/Decimal para manejo preciso de dinero/crypto)
     target_amount: Mapped[float] = mapped_column(Numeric(18, 2), nullable=False)  # Meta de recaudación
@@ -50,7 +61,8 @@ class Batch(Base):
         default=BatchStatusEnum.DRAFT,
         nullable=False
     )
-    smart_contract_address: Mapped[Optional[str]] = mapped_column(String(255), nullable=True) # dirección del contrato inteligente en la blockchain (si aplica)
+    smart_contract_address: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    blockchain_tx_hash: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Llaves Foráneas

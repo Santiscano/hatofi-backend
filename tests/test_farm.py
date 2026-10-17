@@ -110,6 +110,29 @@ def test_farmer_can_create_and_update_owned_farm(client: TestClient) -> None:
     assert invalid_current.status_code == 400
 
 
+def test_user_can_list_only_owned_farms(client: TestClient) -> None:
+    client.post(
+        "/farms",
+        json={"name": "B Finca", "location": "Caldas", "capacity_head_count": 20},
+        headers=auth_headers(1),
+    )
+    client.post(
+        "/farms",
+        json={"name": "A Finca", "location": "Antioquia", "capacity_head_count": 10},
+        headers=auth_headers(1),
+    )
+    client.post(
+        "/farms",
+        json={"name": "Otra Finca", "location": "Meta", "capacity_head_count": 5},
+        headers=auth_headers(2),
+    )
+
+    response = client.get("/farms", headers=auth_headers(1))
+
+    assert response.status_code == 200
+    assert [farm["name"] for farm in response.json()] == ["A Finca", "B Finca"]
+
+
 def test_only_farmer_owner_can_manage_farm(client: TestClient) -> None:
     create_response = client.post(
         "/farms",
