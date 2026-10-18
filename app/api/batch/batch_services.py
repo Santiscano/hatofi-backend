@@ -118,13 +118,14 @@ class BatchService:
             estimated_roi_percentage=batch_create.estimated_roi_percentage,
         )
         db.add(batch)
-        db.commit()
-        db.refresh(batch)
-        if STELLAR_ENABLED:
-            funding_start = batch.funding_start_date
-            if funding_start.tzinfo is None:
-                funding_start = funding_start.replace(tzinfo=timezone.utc)
-            try:
+        try:
+            # Flush assigns the database id without committing, so a failed
+            # blockchain publication can roll back the local batch as well.
+            db.flush()
+            if STELLAR_ENABLED:
+                funding_start = batch.funding_start_date
+                if funding_start.tzinfo is None:
+                    funding_start = funding_start.replace(tzinfo=timezone.utc)
                 tx_hash = create_batch_on_chain(
                     batch_id=batch.id,
                     farm_id=batch.farm_id,
@@ -144,15 +145,15 @@ class BatchService:
                     ),
                     farmer_address=batch_create.farmer_address,
                 )
-            except (RuntimeError, ValueError) as exc:
-                db.rollback()
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"No se pudo publicar el batch en Stellar: {exc}",
-                ) from exc
-            batch.blockchain_tx_hash = tx_hash
+                batch.blockchain_tx_hash = tx_hash
             db.commit()
             db.refresh(batch)
+        except (RuntimeError, ValueError) as exc:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"No se pudo publicar el batch en Stellar: {exc}",
+            ) from exc
         return batch
 
     @staticmethod
