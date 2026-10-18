@@ -293,6 +293,28 @@ def test_investor_can_invest_increase_and_query_summary(
     assert summary.json()["open_amount"] == "8000.00"
 
 
+def test_investor_can_invest_ten_usdc(
+    client: TestClient,
+) -> None:
+    created = client.post(
+        "/batches", json=batch_payload(), headers=auth_headers(2)
+    )
+    batch_id = created.json()["id"]
+    with TestingSessionLocal() as db:
+        batch = db.query(Batch).filter(Batch.id == batch_id).one()
+        batch.status = BatchStatusEnum.FUNDING
+        db.commit()
+
+    investment = client.post(
+        "/investments",
+        json={"batch_id": batch_id, "amount": "10.00"},
+        headers=auth_headers(3),
+    )
+
+    assert investment.status_code == 201
+    assert investment.json()["amount"] == "10.00"
+
+
 def test_investment_rejects_duplicate_and_amount_above_remaining(
     client: TestClient,
 ) -> None:
