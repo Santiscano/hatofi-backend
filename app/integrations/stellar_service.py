@@ -75,6 +75,7 @@ def create_batch_on_chain(
     try:
         from stellar_sdk import Keypair, Network, scval
         from stellar_sdk.contract import ContractClient
+        from stellar_sdk.contract.exceptions import SimulationFailedError
     except ImportError as exc:
         raise RuntimeError(
             "Instala stellar-sdk para habilitar la publicación de batches en Stellar."
@@ -93,26 +94,33 @@ def create_batch_on_chain(
         rpc_url=STELLAR_RPC_URL,
         network_passphrase=network_passphrase,
     )
-    transaction = client.invoke(
-        "create_batch",
-        parameters=[
-            scval.to_uint64(batch_id),
-            scval.to_uint64(farm_id),
-            scval.to_string(code),
-            scval.to_string(title),
-            scval.to_string(description or ""),
-            scval.to_symbol(category),
-            scval.to_address(farmer_address),
-            scval.to_int128(amount_to_atomic(target_amount)),
-            scval.to_int128(amount_to_atomic(price_per_share)),
-            scval.to_int128(int(Decimal(str(estimated_roi_percentage)) * 100)),
-            scval.to_uint32(duration_months),
-            scval.to_uint64(funding_start_timestamp),
-            scval.to_uint64(funding_end_timestamp),
-        ],
-        source=keypair.public_key,
-        signer=keypair,
-    )
+    try:
+        transaction = client.invoke(
+            "create_batch",
+            parameters=[
+                scval.to_uint64(batch_id),
+                scval.to_uint64(farm_id),
+                scval.to_string(code),
+                scval.to_string(title),
+                scval.to_string(description or ""),
+                scval.to_symbol(category),
+                scval.to_address(farmer_address),
+                scval.to_int128(amount_to_atomic(target_amount)),
+                scval.to_int128(amount_to_atomic(price_per_share)),
+                scval.to_int128(int(Decimal(str(estimated_roi_percentage)) * 100)),
+                scval.to_uint32(duration_months),
+                scval.to_uint64(funding_start_timestamp),
+                scval.to_uint64(funding_end_timestamp),
+            ],
+            source=keypair.public_key,
+            signer=keypair,
+        )
+    except SimulationFailedError as exc:
+        raise RuntimeError(
+            "El contrato rechazó los datos del batch durante la simulación. "
+            "Verifica que el contrato desplegado esté actualizado y que los "
+            "valores cumplan sus reglas de validación."
+        ) from exc
     transaction.sign_and_submit()
     if transaction.send_transaction_response is None:
         raise RuntimeError("Stellar no devolvió confirmación de la transacción.")
