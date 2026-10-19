@@ -95,6 +95,78 @@ def batch_payload() -> dict:
     }
 
 
+def chain_payload() -> dict:
+    """Payload de creación con la dirección del farmer, requerida para Stellar."""
+    payload = batch_payload()
+    payload["farmer_address"] = "G" + "A" * 55
+    return payload
+
+
+def capture_chain_calls(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
+    """Activa Stellar y captura los argumentos con los que se publica cada lote."""
+    calls: list[dict] = []
+
+    def fake_create_batch_on_chain(**kwargs):
+        calls.append(kwargs)
+        return "tx-hash"
+
+    monkeypatch.setattr("app.api.batch.batch_services.STELLAR_ENABLED", True)
+    monkeypatch.setattr(
+        "app.api.batch.batch_services.create_batch_on_chain",
+        fake_create_batch_on_chain,
+    )
+    return calls
+
+
+def test_batch_is_published_on_chain_using_its_code(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = capture_chain_calls(monkeypatch)
+
+    response = client.post(
+        "/batches", json=chain_payload(), headers=auth_headers(2)
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert len(calls) == 1
+    # La blockchain se indexa por el código (uuid4), nunca por el id de la base de datos.
+    assert calls[0]["code"] == body["code"]
+    assert calls[0]["code"].startswith("BATCH-")
+    assert "batch_id" not in calls[0]
+    assert body["blockchain_tx_hash"] == "tx-hash"
+
+
+def test_chain_key_survives_a_database_reset(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Tras un reinicio de la base de datos el id se repite, el código no."""
+    calls = capture_chain_calls(monkeypatch)
+
+    first = client.post(
+        "/batches", json=chain_payload(), headers=auth_headers(2)
+    )
+    assert first.status_code == 201
+
+    # Se simula el reinicio de la base de datos: el id vuelve a empezar en 1.
+    with TestingSessionLocal() as db:
+        db.query(Batch).delete()
+        db.commit()
+
+    second = client.post(
+        "/batches", json=chain_payload(), headers=auth_headers(2)
+    )
+    assert second.status_code == 201
+
+    # El id de la base de datos se reutiliza, pero la clave de la blockchain no.
+    assert first.json()["id"] == second.json()["id"]
+    assert first.json()["code"] != second.json()["code"]
+    assert [call["code"] for call in calls] == [
+        first.json()["code"],
+        second.json()["code"],
+    ]
+
+
 def test_owner_can_create_edit_and_change_batch_status(
     client: TestClient,
 ) -> None:

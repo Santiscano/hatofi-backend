@@ -98,3 +98,27 @@ class UserService:
             }),
             "token_type": "bearer",
         }
+
+    @staticmethod
+    def update_password_without_session(email: str, new_password: str) -> str:
+        """
+        Actualiza la contraseña de un usuario.
+        Args:
+            email (str): Correo electrónico del usuario.
+            new_password (str): Nueva contraseña del usuario.
+        Returns:
+            str: Mensaje de éxito.
+        Raises:
+            HTTPException: Si el correo electrónico no está registrado.
+        """
+        db = Session()  # Crear una nueva sesión de base de datos
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Usuario no encontrado.",
+            )
+
+        user.hashed_password = get_password_hash(new_password)
+        db.commit()
+        return "Contraseña actualizada exitosamente."

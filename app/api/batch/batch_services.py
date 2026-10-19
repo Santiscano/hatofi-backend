@@ -30,6 +30,12 @@ ALLOWED_STATUS_TRANSITIONS: dict[BatchStatusEnum, set[BatchStatusEnum]] = {
 class BatchService:
     @staticmethod
     def _generate_code() -> str:
+        """Genera el identificador estable del lote.
+
+        Este código (uuid4) es el que se usa como clave del lote en la blockchain,
+        en lugar del id autoincremental de la base de datos. Así el lote sigue
+        siendo localizable aunque se reinicie o migre la base de datos.
+        """
         return f"BATCH-{uuid4().hex.upper()}"
 
     @staticmethod
@@ -127,9 +133,8 @@ class BatchService:
                 if funding_start.tzinfo is None:
                     funding_start = funding_start.replace(tzinfo=timezone.utc)
                 tx_hash = create_batch_on_chain(
-                    batch_id=batch.id,
-                    farm_id=batch.farm_id,
                     code=batch.code,
+                    farm_id=batch.farm_id,
                     title=batch.title,
                     description=batch.description,
                     category=batch.category.value,
