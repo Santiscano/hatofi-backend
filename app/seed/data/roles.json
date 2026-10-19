@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "name": "admin",
+    "description": "Administrator with full access."
+  },
+  {
+    "id": 2,
+    "name": "develop",
+    "description": "Developer role."
+  },
+  {
+    "id": 3,
+    "name": "user_investment",
+    "description": "Investment user role."
+  },
+  {
+    "id": 4,
+    "name": "user_farmer",
+    "description": "Farmer user role."
+  }
+]

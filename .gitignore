@@ -60,4 +60,4 @@ Desktop.ini
 *.swo
 *~
 
-/app/seed
+# /app/seed
